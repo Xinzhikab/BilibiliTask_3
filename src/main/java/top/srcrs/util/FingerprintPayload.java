@@ -3,6 +3,7 @@ package top.srcrs.util;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 
+import java.util.LinkedHashMap;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -32,7 +33,7 @@ public final class FingerprintPayload {
      * @return 形如 {@code {"payload":"{...}"}} 的 JSON 字符串
      */
     public static String build(String userAgent, String uuid) {
-        JSONObject payload = new JSONObject(true);
+        JSONObject payload = new JSONObject(new LinkedHashMap<>());
         payload.put("3064", 1);
         payload.put("5062", String.valueOf(System.currentTimeMillis()));
         payload.put("03bf", "https%3A%2F%2Fwww.bilibili.com%2F");
@@ -57,7 +58,7 @@ public final class FingerprintPayload {
         payload.put("5f45", null);
         payload.put("db46", 0);
 
-        JSONObject body = new JSONObject(true);
+        JSONObject body = new JSONObject(new LinkedHashMap<>());
         body.put("payload", payload.toJSONString());
         return body.toJSONString();
     }
@@ -69,7 +70,7 @@ public final class FingerprintPayload {
      * @return 3c43 字段内容
      */
     private static JSONObject navigator(String userAgent) {
-        JSONObject nav = new JSONObject(true);
+        JSONObject nav = new JSONObject(new LinkedHashMap<>());
         nav.put("2673", 0);
         nav.put("5766", 32);
         nav.put("6527", 0);
