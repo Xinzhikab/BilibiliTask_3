@@ -226,6 +226,8 @@ public class ThrowCoinTask implements Task {
      * 之前这里塞了 {@code eab_x}、{@code ramval}、{@code ga} 等接口并不认识的参数，还套了三层重试，
      * 每次重试前又拉一遍视频详情，请求量翻好几倍反而更容易触发风控。现在只发官方要求的参数，
      * 失败就如实报出来。
+     * <p>
+     * {@code csrf_token} 与 {@code csrf} 同值，网页端表单两个都带。
      *
      * @param video 视频信息
      * @return 是否投币成功
@@ -237,6 +239,7 @@ public class ThrowCoinTask implements Task {
         params.put("select_like", selectLike());
         params.put("cross_domain", "true");
         params.put("csrf", USER_DATA.getBiliJct());
+        params.put("csrf_token", USER_DATA.getBiliJct());
 
         JSONObject response = Request.post(BiliApi.COIN_ADD, params,
                 BiliApi.videoPage(video.getBvid(), video.getAid()));

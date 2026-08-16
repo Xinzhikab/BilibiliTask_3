@@ -23,6 +23,9 @@ public final class BiliApi {
     public static final String NAV = "https://api.bilibili.com/x/web-interface/nav";
     /** 获取 buvid3 / buvid4，缺少这两个 Cookie 容易触发风控 */
     public static final String FINGER_SPI = "https://api.bilibili.com/x/frontend/finger/spi";
+    /** 上报浏览器指纹，激活 buvid，不激活的话投币等敏感接口会回 -401 */
+    public static final String EX_CLIMB_WUZHI =
+            "https://api.bilibili.com/x/internal/gaia-gateway/ExClimbWuzhi";
     /** 生成 bili_ticket */
     public static final String GEN_WEB_TICKET =
             "https://api.bilibili.com/bapis/bilibili.api.ticket.v1.Ticket/GenWebTicket";
