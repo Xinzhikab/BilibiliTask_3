@@ -13,6 +13,7 @@ import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.client.methods.RequestBuilder;
 import org.apache.http.client.utils.URIBuilder;
+import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
@@ -78,6 +79,10 @@ public final class Request {
     private static volatile String buvid3 = "";
     private static volatile String buvid4 = "";
     private static volatile String biliTicket = "";
+    private static volatile String uuidCookie = "";
+    private static volatile String bLsid = "";
+    private static volatile String bNut = "";
+    private static volatile String buvidFp = "";
 
     private static final CloseableHttpClient CLIENT = buildClient();
 
@@ -262,6 +267,25 @@ public final class Request {
     }
 
     /**
+     * 发送 JSON 请求体的 POST 请求。
+     * <p>
+     * gaia 风控的指纹上报接口（ExClimbWuzhi）要求 {@code application/json} 请求体。
+     *
+     * @param url      请求地址
+     * @param jsonBody JSON 字符串
+     * @param referer  Referer 头
+     * @return 响应内容
+     */
+    public static JSONObject postJson(String url, String jsonBody, String referer) {
+        HttpUriRequest request = builder(HttpPost.METHOD_NAME, referer)
+                .addHeader("Content-Type", "application/json")
+                .setUri(url)
+                .setEntity(new StringEntity(jsonBody, StandardCharsets.UTF_8))
+                .build();
+        return execute(request);
+    }
+
+    /**
      * 把 JSON 参数转成 httpclient 的键值对数组。
      * <p>
      * 推送相关的工具类还在用，保留为公开方法。
@@ -360,6 +384,10 @@ public final class Request {
         appendCookie(sb, "buvid3", buvid3);
         appendCookie(sb, "buvid4", buvid4);
         appendCookie(sb, "bili_ticket", biliTicket);
+        appendCookie(sb, "_uuid", uuidCookie);
+        appendCookie(sb, "b_lsid", bLsid);
+        appendCookie(sb, "b_nut", bNut);
+        appendCookie(sb, "buvid_fp", buvidFp);
         return sb.toString();
     }
 
@@ -370,9 +398,13 @@ public final class Request {
     }
 
     /**
-     * 首次请求前补齐风控相关的 Cookie。
+     * 首次请求前补齐风控相关的 Cookie，并激活 buvid。
      * <p>
      * 先把标记置位再去请求，避免这两个请求自己又触发一次初始化。
+     * <p>
+     * 2024 年起 B 站要求 buvid3 必须带上配套设备 Cookie（_uuid/b_lsid/b_nut/buvid_fp），
+     * 并调 ExClimbWuzhi 上报一次浏览器指纹才算"激活"；未激活的 buvid 在投币等
+     * 敏感写接口上会被直接判成 {@code -401 非法访问}。
      */
     private static synchronized void bootstrap() {
         if (bootstrapped) {
@@ -390,9 +422,30 @@ public final class Request {
                 buvid3 = InitUserAgent.randomBuvid();
                 log.debug("buvid 接口不可用，改用本地生成的 buvid3");
             }
+            uuidCookie = FingerprintPayload.randomUuid();
+            bLsid = FingerprintPayload.randomBLsid();
+            bNut = String.valueOf(System.currentTimeMillis() / 1000);
+            buvidFp = FingerprintPayload.randomBuvidFp();
             biliTicket = BiliTicket.fetch();
+            activateBuvid();
         } catch (Exception e) {
             log.warn("⚠️初始化风控 Cookie 失败，继续以基础 Cookie 运行: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * 上报浏览器指纹，激活 buvid。
+     * <p>
+     * 失败只记日志不中断：激活失败时敏感接口可能被拦，但观看/签到等多数任务仍可完成。
+     */
+    private static void activateBuvid() {
+        JSONObject response = postJson(BiliApi.EX_CLIMB_WUZHI,
+                FingerprintPayload.build(userAgent, uuidCookie), BiliApi.REFERER_MAIN);
+        if (Request.code(response) == 0) {
+            log.debug("buvid 激活成功");
+        } else {
+            log.warn("⚠️buvid 激活失败（投币可能被拦）: {} - {}",
+                    response.getString("code"), response.getString("message"));
         }
     }
 
